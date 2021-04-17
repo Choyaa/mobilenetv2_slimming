@@ -189,11 +189,16 @@ if __name__ == "__main__":
     """
     model = get_model(num_classes=27, sample_size=112, width_mult=1.)
    # model = model.cuda()
-    model = nn.DataParallel(model, device_ids=None)
+   # model = nn.DataParallel(model, device_ids=None)
     print(model)
     print('bgin')
+    for name in model.named_modules():
+        if name == 'first_conv.0':
+            print(name)
+        if name == 'first_conv.1':
+            print(name)
     for k, v in model.state_dict().items() :
-        print(k)
+                    print(k)
 
     #input_var = Variable(torch.randn(8, 3, 16, 112, 112))
     #output = model(input_var)

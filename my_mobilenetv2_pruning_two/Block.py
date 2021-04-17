@@ -20,7 +20,7 @@ class Baselayer:
         raise NotImplementedError
 
     def _cloneBN(self, bn_module, statedict, mask):
-        assert isinstance(bn_module, nn.BatchNorm2d)
+        assert isinstance(bn_module, nn.BatchNorm3d)
         bn_module.weight.data = statedict[0][mask.tolist()].clone()
         bn_module.bias.data = statedict[1][mask.tolist()].clone()
         bn_module.running_mean = statedict[2][mask.tolist()].clone()
@@ -56,15 +56,17 @@ class CB(Baselayer):
         self.inputchannel = self.statedict[0].shape[1]
         self.outputchannel = self.statedict[-1].shape[0]
         self.bnscale = self.statedict[1].abs().clone()
+        print('CBl:::::::::')
+        print(self.bnscale)
 
     def clone2module(self, module: nn.Module, inputmask):
-        modulelayers = [m for m in module.modules() if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d)]
-        temp = self.statedict[0][:, inputmask.tolist(), :, :]
+        modulelayers = [m for m in module.modules() if isinstance(m, nn.Conv3d) or isinstance(m, nn.BatchNorm3d)]
+        temp = self.statedict[0][:, inputmask.tolist(), :, :, :]
         if self.keepoutput:
             modulelayers[0].weight.data = temp.clone()
             self._cloneBN(modulelayers[1], self.statedict[1:5], torch.arange(self.statedict[1].shape[0]))
         else:
-            modulelayers[0].weight.data = temp[self.prunemask.tolist(), :, :, :].clone()
+            modulelayers[0].weight.data = temp[self.prunemask.tolist(), :, :, :,:].clone()
             self._cloneBN(modulelayers[1], self.statedict[1:5], self.prunemask)
 
 
@@ -80,25 +82,25 @@ class InverRes(Baselayer):
             self.bnscale = None
 
     def clone2module(self, module: nn.Module, inputmask, keepoutput=False):
-        modulelayers = [m for m in module.modules() if isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm2d)]
+        modulelayers = [m for m in module.modules() if isinstance(m, nn.Conv3d) or isinstance(m, nn.BatchNorm3d)]
         if self.numlayer == 2:
-            modulelayers[0].weight.data = self.statedict[0][inputmask.tolist(), :, :, :].clone()
+            modulelayers[0].weight.data = self.statedict[0][inputmask.tolist(), :, :, :, :].clone()
             modulelayers[0].groups = inputmask.shape[0]
             self._cloneBN(modulelayers[1], self.statedict[1:5], inputmask)
 
-            modulelayers[2].weight.data = self.statedict[5][:, inputmask.tolist(), :, :].clone()
+            modulelayers[2].weight.data = self.statedict[5][:, inputmask.tolist(), :, :, :].clone()
             self._cloneBN(modulelayers[3], self.statedict[6:10], torch.arange(self.statedict[6].shape[0]))
 
         if self.numlayer == 3:
-            temp = self.statedict[0][:, inputmask.tolist(), :, :]
-            modulelayers[0].weight.data = temp[self.prunemask.tolist(), :, :, :].clone()
+            temp = self.statedict[0][:, inputmask.tolist(), :, :, :]
+            modulelayers[0].weight.data = temp[self.prunemask.tolist(), :, :, :,  :   ].clone()
             self._cloneBN(modulelayers[1], self.statedict[1:5], self.prunemask)
 
-            modulelayers[2].weight.data = self.statedict[5][self.prunemask.tolist(), :, :, :]
+            modulelayers[2].weight.data = self.statedict[5][self.prunemask.tolist(), :, :, :, :]
             modulelayers[2].groups = self.prunemask.shape[0]
             self._cloneBN(modulelayers[3], self.statedict[6:10], self.prunemask)
 
-            modulelayers[4].weight.data = self.statedict[10][:, self.prunemask.tolist(), :, :]
+            modulelayers[4].weight.data = self.statedict[10][:, self.prunemask.tolist(), :, :, :]
             self._cloneBN(modulelayers[5], self.statedict[11:15], torch.arange(self.statedict[11].shape[0]))
 
 

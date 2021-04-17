@@ -63,10 +63,9 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, opt,
         optimizer.zero_grad()
         loss.backward()
                 # ===set up opt.s to sparisty
-        if opt.sr:
+        if opt.sparsity_regularization:
             for m in model.modules():
                 if isinstance(m, nn.BatchNorm3d):
-                    print("sprisddddddddddddddddddddddddddd")
                     m.weight.grad.data.add_(opt.s * torch.sign(m.weight.data))  # L1   #sparsity 稀疏正则化
         optimizer.step()
 

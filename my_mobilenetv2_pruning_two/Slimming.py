@@ -25,9 +25,53 @@ class BasePruner:
                 self.blocks.append(InverRes(name, idx, idx - 1, idx + 1, list(module.state_dict().values())))
             if isinstance(module, conv_bn):
                 self.blocks.append(CB(name, idx, idx - 1, idx + 1, list(module.state_dict().values())))
+
             if isinstance(module, nn.Linear):
                 self.blocks.append(FC(name, idx, idx - 1, idx + 1, list(module.state_dict().values())))
-        print(self.blocks)
+       # print(self.blocks)
+    def clone_model(self):
+        blockidx = 0
+        for name, m0 in self.newmodel.named_modules():
+            if type(m0) not in [InvertedResidual, conv_bn, nn.Linear ]:
+                continue
+            block = self.blocks[blockidx]
+            curstatedict = block.statedict
+            if blockidx == 0:
+                inputmask = torch.arange(block.inputchannel)
+            assert name == block.layername
+            if isinstance(block, CB):             #CB
+                # conv(1weight)->bn(4weight)->relu
+                assert len(curstatedict) == (1 + 4)
+                block.clone2module(m0, inputmask)
+                inputmask = block.prunemask
+            if isinstance(block, InverRes):       #InverRes
+                # dw->project or expand->dw->project
+                assert len(curstatedict) in (10, 15)
+                block.clone2module(m0, inputmask)
+                inputmask = torch.arange(block.outputchannel)
+            if isinstance(block, FC):             #FC
+                block.clone2module(m0, inputmask)
+            blockidx += 1
+            if blockidx > (len(self.blocks) - 1): break
+
+        for name0, m0 in self.newmodel.named_modules():
+            if name0 == 'first_conv.0':
+                for name1, m1 in self.model.named_modules():
+                    if name1 == 'first_conv.0':
+                        break
+                m0.weight.data = m1.weight.data
+                break
+
+        for name0, m0 in self.newmodel.named_modules():
+            if name0 == 'first_conv.1':
+                for name1, m1 in self.model.named_modules():
+                    if name1 == 'first_conv.1':
+                        break
+                m0.weight.data = m1.weight.data
+                m0.bias.data = m1.bias.data
+                m0.running_mean.data = m1.running_mean.data
+                m0.running_var.data = m1.running_var.data
+                break
 
 
 #？？？？？？分割原理
@@ -45,54 +89,12 @@ def css_thresholding(x, OT_DISCARD_PERCENT):
     th = (x_sorted[i - 1] + x_sorted[i]) / 2 if i > 0 else 0
     return th
 
-def clone_model(self):
-    blockidx = 0
-    for name, m0 in self.newmodel.named_modules():
-        if type(m0) not in [InvertedResidual, conv_bn, nn.Linear ]:
-            continue
-        block = self.blocks[blockidx]
-        curstatedict = block.statedict
-        if blockidx == 0:
-            inputmask = torch.arange(block.inputchannel)
-        assert name == block.layername
-        if isinstance(block, CB):             #CB
-            # conv(1weight)->bn(4weight)->relu
-            assert len(curstatedict) == (1 + 4)
-            block.clone2module(m0, inputmask)
-            inputmask = block.prunemask
-        if isinstance(block, InverRes):       #InverRes
-            # dw->project or expand->dw->project
-            assert len(curstatedict) in (10, 15)
-            block.clone2module(m0, inputmask)
-            inputmask = torch.arange(block.outputchannel)
-        if isinstance(block, FC):             #FC
-            block.clone2module(m0, inputmask)
-        blockidx += 1
-        if blockidx > (len(self.blocks) - 1): break
 
-    for name0, m0 in self.newmodel.named_modules():
-        if name0 == 'first_conv.0':
-            for name1, m1 in self.model.named_modules():
-                if name1 == 'first_conv.0':
-                    break
-            m0.weight.data = m1.weight.data
-            break
-
-    for name0, m0 in self.newmodel.named_modules():
-        if name0 == 'first_conv.1':
-            for name1, m1 in self.model.named_modules():
-                if name1 == 'first_conv.1':
-                    break
-            m0.weight.data = m1.weight.data
-            m0.bias.data = m1.bias.data
-            m0.running_mean.data = m1.running_mean.data
-            m0.running_var.data = m1.running_var.data
-            break
 
 class SlimmingPrune(BasePruner):
     def __init__(self, model, newmodel , testset, trainset, optimizer, args):
         super().__init__(model, newmodel, testset, trainset, optimizer, args)   #111111111
-        self.pruneratio = args.pruneratio
+        #self.pruneratio = args.pruneratio
 
     def prune(self):
         super().prune()   #执行baseprune，生成oldmodel，提取18层   22222222

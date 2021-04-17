@@ -27,6 +27,38 @@ import torch
 from torch import nn
 from models import squeezenet_3d, mobilenetv2_3d
 from torchsummary import summary
+from collections import OrderedDict 
+def olde_key_to_new(pretrained_state_dict):
+    new_dict = OrderedDict()
+    for k, v in pretrained_state_dict.items():   
+        if  "features.0.0.weight" in k:
+            new_dict["module.features.0.convbn.0.weight"] = v
+        elif  "features.0.1.weight" in k:
+            new_dict["module.features.0.convbn.1.weight"] = v
+        elif "features.0.1.bias" in k:
+            new_dict["module.features.0.convbn.1.bias"] = v
+        elif  "features.0.1.running_mean" in k:
+            new_dict["module.features.0.convbn.1.running_mean"] = v
+        elif "features.0.1.running_var" in k:
+            new_dict["module.features.0.convbn.1.running_var"] = v
+        elif  "features.0.1.num_batches_tracked" in k:
+            new_dict["module.features.0.convbn.1.num_batches_tracked"] = v
+        elif  "features.18.0.weight" in k:
+            new_dict["module.features.18.convbn.0.weight"] = v
+        elif  "features.18.1.weight" in k:
+            new_dict["module.features.18.convbn.1.weight"] = v
+        elif  "features.18.1.bias" in k:
+            new_dict["module.features.18.convbn.1.bias"] =v
+        elif  "features.18.1.running_mean" in k :
+            new_dict["module.features.18.convbn.1.running_mean"] = v
+        elif  "features.18.1.running_var" in k:
+            new_dict["module.features.18.convbn.1.running_var"] = v
+        elif  "features.18.1.num_batches_tracked" in k:
+            new_dict["module.features.18.convbn.1.num_batches_tracked"] = v                                                                                                      
+        else:
+            new_dict[k] = v
+    return new_dict
+
 
 def generate_model(opt):
     assert opt.model in ['squeezenet', 'mobilenetv2']
@@ -81,10 +113,14 @@ def generate_model(opt):
             assert opt.arch == pretrain['arch']
 
             if opt.same_modality_finetune:
-                model.load_state_dict(pretrain['state_dict'],strict= False)
+                pretrained_state_dict = pretrain['state_dict']               
+                new_dict = olde_key_to_new(pretrained_state_dict)   
+                 #       pretrain['state_dict']
+                model.load_state_dict(new_dict)
                 print('loaded pretrained model {}'.format(opt.pretrain_path))
             else:
-                pretrained_state_dict = pretrain['state_dict']
+                
+                #print(pretrained_state_dict)
                 pretrained_state_dict = {k:v for k, v in pretrained_state_dict.items() }
                 model_dict = model.state_dict()
                 model_dict.update(pretrained_state_dict)
@@ -117,7 +153,7 @@ def generate_model(opt):
             assert opt.arch == pretrain['arch']
 
             if opt.same_modality_finetune:
-                model.load_state_dict(pretrain['state_dict'],strict= False)
+                model.load_state_dict(pretrain['state_dict'])
                 print('loaded pretrained model {}'.format(opt.pretrain_path))
             else:
                 pretrained_state_dict = pretrain['state_dict']
@@ -174,7 +210,8 @@ if __name__ == "__main__":
 
     print(opt)
 
-
+    with open(os.path.join(opt.result_path, 'opts.json'), 'w') as opt_file:
+        json.dump(vars(opt), opt_file)
 
     torch.manual_seed(opt.manual_seed)
 #model model model model model model model model model

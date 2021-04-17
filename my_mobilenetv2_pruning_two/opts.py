@@ -32,7 +32,7 @@ def parse_opts():
     parser.add_argument('--test_list', default='test_list.txt', type=str, help='File name of test list')
     parser.add_argument('--result_path', default='/home/root5/GeScale/choyaa-GeScale-master/my_mobilenetv2_pruning_two/results/SHGD13_prune', type=str, help='Result directory path')
     parser.add_argument('--resume_path', default='', type=str, help='Save data (.pth) of previous training')
-    parser.add_argument('--pretrain_path', default='/home/root5/GeScale/choyaa-GeScale-master/my_mobilenetv2_pruning_two/results/SHGD13_sparsity/SHGD_mobilenetv2_IRD_8_best.pth', type=str, help='Pretrained model (.pth)')
+    parser.add_argument('--pretrain_path', default='/home/root5/GeScale/choyaa-GeScale-master/my_mobilenetv2_pruning_two/results/SHGD13_sparsity/SHGD_mobilenetv2_IRD_8_checkpoint.pth', type=str, help='Pretrained model (.pth)')
 #resumepath         /home/root5/GeScale/choyaa-GeScale-master/my__netslimming+3D/results/SHGD13_sparsity/SHGD_mobilenetv2_IRD_8_sparsity_checkpoint.pth  
 # ========================= Model Configs ==========================
     parser.add_argument('--model', default='mobilenetv2', type=str, help='(squeezenet1_1 | mobilenetv2 ')
@@ -48,7 +48,6 @@ def parse_opts():
     parser.set_defaults(same_modality_finetune=True)
     parser.add_argument('--sample_size', default=112, type=int, help='Height and width of inputs')
     parser.add_argument('--sample_duration', default=8, type=int, help='Temporal duration of inputs')
-    parser.add_argument('--cfg', default=None, type=list, help='Temporal duration of inputs')
 
 # ========================= Training Configs ==========================
     parser.add_argument('--batch_size', default=32, type=int, help='Batch Size')
@@ -75,7 +74,7 @@ def parse_opts():
     parser.add_argument('--n_val_samples', default=3, type=int, help='Number of validation samples for each activity')
     parser.add_argument('--ft_begin_index', default=0, type=int, help='Begin block index of fine-tuning')
     parser.add_argument('--no_cuda', action='store_true', help='If true, cuda is not used.')
-    parser.set_defaults(no_cuda=True)
+    parser.set_defaults(no_cuda=False)
     parser.add_argument('--n_threads', default=16, type=int, help='Number of threads for multi-thread loading')
     parser.add_argument('--checkpoint', default=10, type=int, help='Trained model is saved at every this epochs.')
     parser.add_argument('--norm_value', default=1, type=int, help='If 1, range of inputs is [0-255]. If 255, range of inputs is [0-1].')
@@ -91,7 +90,7 @@ def parse_opts():
     parser.set_defaults(test=False)
 
 #=========================sparsity ============================================
-    parser.add_argument('--sparsity_regularization',  action='store_true',help='train with channel sparsity regularization')
+    parser.add_argument('--sr',  action='store_true',help='train with channel sparsity regularization')
     parser.set_defaults(sparsity_regularization=False)
     parser.add_argument('--s', type=float, default=0.0001,
                         help='scale sparse rate (default: 0.0001)')
